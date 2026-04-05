@@ -22,7 +22,7 @@ SQL errors are one of the most common and costly mistakes in software developmen
 This environment trains agents to identify and correct SQL syntax and logical
 errors, ranging from simple typos to complex multi-join query reconstruction.
 
-The environment provides **partial progress signals** at every step — the agent
+The environment provides **partial progress signals** at every step; the agent
 receives graded feedback even for near-correct answers, enabling meaningful
 learning across the full trajectory rather than sparse end-of-episode rewards.
 
