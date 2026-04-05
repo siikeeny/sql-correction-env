@@ -1,0 +1,20 @@
+[project]
+name = "sql-correction-env"
+version = "1.0.0"
+description = "OpenEnv SQL Query Correction RL Environment"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "httpx",
+    "openai",
+    "openenv-core",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sql_env"]
