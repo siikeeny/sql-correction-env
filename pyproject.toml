@@ -20,4 +20,4 @@ build-backend = "hatchling.build"
 packages = ["sql_env"]
 
 [project.scripts]
-server = "server:app"
+server = "server.app:main"
