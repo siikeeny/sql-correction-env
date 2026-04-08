@@ -86,7 +86,6 @@ async def step(request: StepRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/state")
 @app.post("/state")
 async def state():
     """Return current environment state."""

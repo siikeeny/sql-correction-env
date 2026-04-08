@@ -4,7 +4,7 @@ description: >
   An OpenEnv RL environment where an AI agent fixes broken SQL queries.
   Simulates a real developer task: identifying and correcting SQL syntax
   and logical errors across easy, medium, and hard difficulty levels.
-author: your-username
+author: SyncShift
 tags:
   - openenv
   - sql
