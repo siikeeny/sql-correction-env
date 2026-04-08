@@ -19,6 +19,6 @@ EXPOSE 7860
 
 # health check so HF Space knows when it's ready
 HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:7860/health || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:7860/health', timeout=3)"
 
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]

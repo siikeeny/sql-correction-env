@@ -18,6 +18,7 @@ from sql_env import SQLCorrectionEnv, SQLAction
 
 class ResetRequest(BaseModel):
     difficulty: Optional[str] = "easy"
+    task_name: Optional[str] = None
     task_index: Optional[int] = None
 
 
@@ -60,7 +61,7 @@ app.add_middleware(
 async def reset(request: ResetRequest = ResetRequest()):
     """Reset the environment. Returns initial observation."""
     global env
-    difficulty = request.difficulty or "easy"
+    difficulty = request.task_name or request.difficulty or "easy"
     if difficulty not in ("easy", "medium", "hard"):
         raise HTTPException(status_code=400, detail="difficulty must be easy, medium, or hard")
 
