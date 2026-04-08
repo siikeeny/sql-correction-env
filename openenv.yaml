@@ -73,4 +73,5 @@ tasks:
 endpoints:
   reset: POST /reset
   step:  POST /step
-  state: POST /state
+  state: GET /state
+  health: GET /health
