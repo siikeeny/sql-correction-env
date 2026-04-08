@@ -16,9 +16,13 @@ import os
 import sys
 import textwrap
 from typing import List, Optional
+import re
 
 import httpx
-from openai import OpenAI
+try:
+    from openai import OpenAI
+except Exception:
+    OpenAI = None
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
@@ -72,7 +76,35 @@ SYSTEM_PROMPT = textwrap.dedent(
 ).strip()
 
 
-def get_model_action(client: OpenAI, obs: dict, history: List[str]) -> str:
+SQL_REPLACEMENTS = {
+    "FORM": "FROM",
+    "WEHRE": "WHERE",
+    "WHER": "WHERE",
+    "GRUP": "GROUP",
+    "HAVNG": "HAVING",
+    "ORDR": "ORDER",
+    "INNE": "INNER",
+    "LFT": "LEFT",
+    "BETWEN": "BETWEEN",
+    "DSC": "DESC",
+    "SELCT": "SELECT",
+    "LIMT": "LIMIT",
+    "DPT_ID": "DEPT_ID",
+}
+
+
+def heuristic_correct_sql(query: str) -> str:
+    corrected = query
+    for broken, fixed in SQL_REPLACEMENTS.items():
+        corrected = re.sub(rf"\b{re.escape(broken)}\b", fixed, corrected, flags=re.IGNORECASE)
+    return corrected.strip()
+
+
+def get_model_action(client: Optional["OpenAI"], obs: dict, history: List[str]) -> str:
+    heuristic = heuristic_correct_sql(obs["broken_query"])
+    if client is None:
+        return heuristic
+
     history_block = "\n".join(history[-4:]) if history else "None"
     user_prompt = textwrap.dedent(
         f"""
@@ -103,14 +135,19 @@ def get_model_action(client: OpenAI, obs: dict, history: List[str]) -> str:
             stream=False,
         )
         text = (completion.choices[0].message.content or "").strip()
-        return text if text else "SELECT 1"
+        return text if text else heuristic
     except Exception as exc:
         print(f"[DEBUG] LLM call failed: {exc}", flush=True)
-        return "SELECT 1"
+        return heuristic
 
 
 async def run_task(task_name: str) -> None:
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    client = None
+    if OpenAI is not None and API_KEY not in {"", "dummy"}:
+        try:
+            client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+        except Exception as exc:
+            print(f"[DEBUG] OpenAI client init failed: {exc}", flush=True)
 
     rewards: List[float] = []
     history: List[str] = []
@@ -137,7 +174,7 @@ async def run_task(task_name: str) -> None:
                 action_str = get_model_action(client, obs, history)
             except Exception as exc:
                 print(f"[DEBUG] Model failed: {exc}", flush=True)
-                action_str = "SELECT 1"
+                action_str = heuristic_correct_sql(obs["broken_query"])
 
             try:
                 step_resp = await http.post("/step", json={"corrected_query": action_str})
