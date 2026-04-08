@@ -34,18 +34,18 @@ def grade(action: SQLAction, task: SQLTask) -> SQLReward:
     """
     4-level grader with partial progress signals.
 
-    1.0 — exact normalized match
+    0.99 — exact normalized match
     0.7 — same tokens, minor whitespace/alias differences
     0.4 — key SQL keywords all present and correct table/column names
     0.2 — basic SELECT/FROM structure present
-    0.0 — completely wrong
+    0.01 — completely wrong
     """
     agent = _normalize(action.corrected_query)
     correct = _normalize(task.canonical_answer)
 
     # ── Level 1: Exact match ─────────────────────────────────
     if agent == correct:
-        return SQLReward(value=1.0, reason="Exact match — perfect correction.")
+        return SQLReward(value=0.99, reason="Exact match — perfect correction.")
 
     # ── Level 2: Same token set (right words, minor ordering) ─
     agent_tokens = _tokenize(action.corrected_query)
@@ -77,7 +77,7 @@ def grade(action: SQLAction, task: SQLTask) -> SQLReward:
         )
 
     # ── Level 0: No recognizable SQL ─────────────────────────
-    return SQLReward(value=0.0, reason="Response is not valid SQL.")
+    return SQLReward(value=0.01, reason="Response is not valid SQL.")
 
 
 def generate_feedback(action: SQLAction, task: SQLTask, reward: SQLReward) -> str:
