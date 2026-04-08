@@ -13,6 +13,7 @@ Required environment variables:
 
 import asyncio
 import os
+import sys
 import textwrap
 from typing import List, Optional
 
@@ -184,3 +185,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except Exception as e:
         print(f"[DEBUG] Fatal error: {e}", flush=True)
+finally:
+        sys.exit(0)
