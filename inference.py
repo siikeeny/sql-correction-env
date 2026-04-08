@@ -25,7 +25,7 @@ MODEL_NAME   = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 API_KEY      = os.getenv("HF_TOKEN") or os.getenv("API_KEY", "dummy")
 TASK_NAME    = os.getenv("SQL_ENV_TASK", "easy")
 BENCHMARK    = "sql-correction-env"
-ENV_URL      = os.getenv("ENV_URL", "http://localhost:7860")
+ENV_URL = os.getenv("ENV_URL", "https://SyncShift-sql-correction-env.hf.space")
 MAX_STEPS    = 8
 SUCCESS_SCORE_THRESHOLD = 0.5
 
@@ -113,7 +113,7 @@ async def run_task(task_name: str) -> None:
     log_start(task_name, BENCHMARK, MODEL_NAME)
 
     try:
-        reset_resp = await http.post("/reset", json={"difficulty": task_name})
+        reset_resp = await http.post("/reset", json={"task_name": task_name})
         reset_resp.raise_for_status()
         obs = reset_resp.json()
 
