@@ -23,7 +23,7 @@ observation_space:
     schema_context:
       type: string
       nullable: true
-      description: Table and column definitions (provided on hard tasks only)
+      description: Table and column definitions when a task includes schema context
     error_hint:
       type: string
       nullable: true
@@ -73,4 +73,4 @@ tasks:
 endpoints:
   reset: POST /reset
   step:  POST /step
-  state: GET  /state
+  state: POST /state

@@ -35,4 +35,4 @@ class StepResult(BaseModel):
     observation: SQLObservation
     reward: float
     done: bool
-    info: Dict[str, Any] = {}
+    info: Dict[str, Any] = Field(default_factory=dict)

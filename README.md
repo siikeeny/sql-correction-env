@@ -1,6 +1,6 @@
 ---
 title: SQL Correction RL Environment
-emoji: 🛢️
+emoji: "🛠️"
 colorFrom: blue
 colorTo: indigo
 sdk: docker
@@ -12,15 +12,16 @@ tags:
 # SQL Correction RL Environment
 
 An **OpenEnv-compliant** reinforcement learning environment where an AI agent
-learns to fix broken SQL queries — a real task that developers face every day.
+learns to fix broken SQL queries, a real task that developers face every day.
 
 ---
 
 ## Description & Motivation
 
-SQL errors are one of the most common and costly mistakes in software development.
-This environment trains agents to identify and correct SQL syntax and logical
-errors, ranging from simple typos to complex multi-join query reconstruction.
+SQL errors are one of the most common and costly mistakes in software
+development. This environment trains agents to identify and correct SQL syntax
+and logical errors, ranging from simple typos to complex multi-join query
+reconstruction.
 
 The environment provides **partial progress signals** at every step; the agent
 receives graded feedback even for near-correct answers, enabling meaningful
@@ -34,7 +35,7 @@ learning across the full trajectory rather than sparse end-of-episode rewards.
 |--------------------|-----------------|----------------------------------------------------------|
 | `task_id`          | string          | Unique identifier for the current task instance          |
 | `broken_query`     | string          | The malformed SQL query the agent must fix               |
-| `schema_context`   | string or null  | Table/column definitions (provided for medium/hard tasks)|
+| `schema_context`   | string or null  | Table and column definitions when a task includes them   |
 | `error_hint`       | string or null  | Plain-language hint about the error (easy tasks only)    |
 | `step_number`      | integer         | Current step within the episode                          |
 | `previous_attempt` | string or null  | The agent's SQL output from the previous step            |
@@ -42,9 +43,9 @@ learning across the full trajectory rather than sparse end-of-episode rewards.
 
 ## Action Space
 
-| Field              | Type   | Description                        |
-|--------------------|--------|------------------------------------|
-| `corrected_query`  | string | The agent's corrected SQL query    |
+| Field              | Type   | Description                     |
+|--------------------|--------|---------------------------------|
+| `corrected_query`  | string | The agent's corrected SQL query |
 
 ---
 
@@ -52,9 +53,9 @@ learning across the full trajectory rather than sparse end-of-episode rewards.
 
 | Name     | Difficulty | Max Steps | Description |
 |----------|------------|-----------|-------------|
-| `easy`   | Easy       | 5         | Fix a single syntax error (e.g. `FORM` → `FROM`). Hint provided. |
-| `medium` | Medium     | 6         | Fix multiple errors including missing keywords and wrong clauses. Schema provided, no hint. |
-| `hard`   | Hard       | 8         | Fix complex multi-join queries with subtle errors and wrong clause ordering. Schema provided, no hint. |
+| `easy`   | Easy       | 5         | Fix a single syntax error (for example `FORM` -> `FROM`). Hint provided. |
+| `medium` | Medium     | 5         | Fix multiple errors including missing keywords and wrong clauses. No hint. |
+| `hard`   | Hard       | 4         | Fix complex multi-join queries with subtle errors and wrong clause ordering. Schema provided, no hint. |
 
 ---
 
@@ -64,11 +65,11 @@ learning across the full trajectory rather than sparse end-of-episode rewards.
 |-------|-----------|
 | `1.0` | Exact match after normalization (perfect fix) |
 | `0.7` | All correct tokens present, structure slightly off |
-| `0.5` | Mostly correct — small errors remain |
-| `0.3` | Partial fix — several errors remain |
+| `0.4` | Most keywords correct and token overlap is high |
+| `0.2` | Basic `SELECT ... FROM ...` structure present |
 | `0.0` | Query still incorrect |
 
-Episodes terminate when reward = 1.0 (success) or max_steps is reached.
+Episodes terminate when reward = 1.0 (success) or max steps is reached.
 
 ---
 
@@ -125,11 +126,11 @@ SQL_ENV_TASK=hard   python inference.py
 
 ## Baseline Scores
 
-| Task   | Model                  | Avg Score | Notes |
-|--------|------------------------|-----------|-------|
-| easy   | Qwen/Qwen2.5-72B       | ~0.85     | Single typo fix, hint provided |
-| medium | Qwen/Qwen2.5-72B       | ~0.62     | Multi-error, schema-guided |
-| hard   | Qwen/Qwen2.5-72B       | ~0.38     | Complex multi-join, no hint |
+| Task   | Model            | Avg Score | Notes |
+|--------|------------------|-----------|-------|
+| easy   | Qwen/Qwen2.5-72B | ~0.85     | Single typo fix, hint provided |
+| medium | Qwen/Qwen2.5-72B | ~0.62     | Multi-error correction |
+| hard   | Qwen/Qwen2.5-72B | ~0.38     | Complex multi-join, schema-guided |
 
 *Run `inference.py` against the live Space to reproduce these scores.*
 
