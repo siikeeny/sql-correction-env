@@ -102,7 +102,6 @@ def get_model_action(client: OpenAI, obs: dict, history: List[str]) -> str:
 # ── Main episode loop ─────────────────────────────────────────
 async def run_task(task_name: str) -> None:
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
-    http   = httpx.AsyncClient(base_url=ENV_URL, timeout=30.0)
 
     rewards:     List[float] = []
     history:     List[str]   = []
@@ -112,26 +111,46 @@ async def run_task(task_name: str) -> None:
 
     log_start(task_name, BENCHMARK, MODEL_NAME)
 
+    http = None
     try:
-        reset_resp = await http.post("/reset", json={"task_name": task_name})
-        reset_resp.raise_for_status()
-        obs = reset_resp.json()
+        http = httpx.AsyncClient(base_url=ENV_URL, timeout=60.0)
+
+        try:
+            reset_resp = await http.post("/reset", json={"task_name": task_name})
+            reset_resp.raise_for_status()
+            obs = reset_resp.json()
+        except Exception as e:
+            print(f"[DEBUG] Reset failed: {e}", flush=True)
+            return
 
         for step in range(1, MAX_STEPS + 1):
-            action_str = get_model_action(client, obs, history)
+            try:
+                action_str = get_model_action(client, obs, history)
+            except Exception as e:
+                print(f"[DEBUG] Model failed: {e}", flush=True)
+                action_str = "SELECT 1"
 
-            step_resp = await http.post("/step", json={"corrected_query": action_str})
-            step_resp.raise_for_status()
-            result = step_resp.json()
+            try:
+                step_resp = await http.post(
+                    "/step",
+                    json={"corrected_query": action_str},
+                )
+                step_resp.raise_for_status()
+                result = step_resp.json()
+            except Exception as e:
+                print(f"[DEBUG] Step failed: {e}", flush=True)
+                break
 
-            obs    = result["observation"]
-            reward = float(result["reward"])
-            done   = bool(result["done"])
-            error  = result.get("info", {}).get("error")
+            obs         = result["observation"]
+            reward      = float(result["reward"])
+            done        = bool(result["done"])
+            error       = result.get("info", {}).get("error")
 
             rewards.append(reward)
             steps_taken = step
-            history.append(f"Step {step}: attempt={action_str!r} reward={reward:+.2f}")
+            history.append(
+                f"Step {step}: attempt={action_str!r} reward={reward:+.2f}"
+            )
 
             log_step(step, action_str, reward, done, error)
 
@@ -145,17 +164,23 @@ async def run_task(task_name: str) -> None:
         print(f"[DEBUG] Episode error: {exc}", flush=True)
 
     finally:
-        try:
-            await http.aclose()
-        except Exception as e:
-            print(f"[DEBUG] HTTP client close error: {e}", flush=True)
+        if http is not None:
+            try:
+                await http.aclose()
+            except Exception as e:
+                print(f"[DEBUG] HTTP close error: {e}", flush=True)
         log_end(success, steps_taken, score, rewards)
 
-
 async def main() -> None:
-    for difficulty in ("easy", "medium", "hard"):
-        await run_task(difficulty)
-        print("", flush=True)
+    try:
+        for difficulty in ("easy", "medium", "hard"):
+            await run_task(difficulty)
+            print("", flush=True)
+    except Exception as e:
+        print(f"[DEBUG] Main error: {e}", flush=True)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        print(f"[DEBUG] Fatal error: {e}", flush=True)
