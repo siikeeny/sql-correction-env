@@ -53,7 +53,7 @@ def grade(action: SQLAction, task: SQLTask) -> SQLReward:
     # ── Level 1: Exact match ─────────────────────────────────
     if agent == correct:
         return SQLReward(
-            value=_clamp(0.99),
+            value=_clamp(0.999),
             reason="Exact match — perfect correction."
         )
 
@@ -93,7 +93,7 @@ def grade(action: SQLAction, task: SQLTask) -> SQLReward:
         )
 
     # ── Level 0: No recognizable SQL ─────────────────────────
-    return SQLReward(value=_clamp(0.01), reason="Response is not valid SQL.")
+    return SQLReward(value=_clamp(0.001), reason="Response is not valid SQL.")
 
 
 def generate_feedback(action: SQLAction, task: SQLTask, reward: SQLReward) -> str:
