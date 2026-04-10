@@ -69,7 +69,7 @@ class SQLCorrectionEnv:
         if abs(reward - self._last_reward) < 0.01 and self._step_count > 1:
             self._stagnation_count += 1
             if self._stagnation_count >= 2:
-                reward = max(0.0, reward - 0.1)  # stagnation penalty
+                reward = max(0.001, reward - 0.1)  # stagnation penalty
         else:
             self._stagnation_count = 0
 
@@ -81,7 +81,7 @@ class SQLCorrectionEnv:
         self._previous_attempt = action.corrected_query
 
         # episode ends on perfect score or max steps reached
-        done = reward_model.value == 1.0 or self._step_count >= self._task.max_steps
+        done = reward_model.value >= 0.99 or self._step_count >= self._task.max_steps
         self._done = done
 
         obs = self._make_observation()

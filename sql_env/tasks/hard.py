@@ -1,4 +1,5 @@
 from sql_env.models import SQLTask
+from sql_env.grader import grade
 
 HARD_TASKS = [
     SQLTask(
@@ -13,6 +14,7 @@ HARD_TASKS = [
         ),
         error_hint=None,
         max_steps=4,
+        grader=grade,
     ),
     SQLTask(
         task_id="hard_002",
@@ -27,6 +29,7 @@ HARD_TASKS = [
         ),
         error_hint=None,
         max_steps=4,
+        grader=grade,
     ),
     SQLTask(
         task_id="hard_003",
@@ -38,5 +41,6 @@ HARD_TASKS = [
         ),
         error_hint=None,
         max_steps=4,
+        grader=grade,
     ),
 ]

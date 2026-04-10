@@ -1,7 +1,7 @@
 """
 FastAPI HTTP wrapper for SQLCorrectionEnv.
 
-Exposes the OpenEnv-required endpoints: /reset, /step, /state.
+Exposes the OpenEnv-required endpoints: /reset, /step, /state + /tasks for validator.
 """
 
 from contextlib import asynccontextmanager
@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from sql_env import SQLAction, SQLCorrectionEnv
+from sql_env.tasks import ALL_TASKS
 
 
 class ResetRequest(BaseModel):
@@ -96,19 +97,28 @@ async def health():
     return {"status": "ok", "service": "sql-correction-env"}
 
 
+@app.get("/tasks")
+async def list_tasks():
+    """Return graded tasks by difficulty (RL validator format)."""
+    graded_tasks = {
+        diff: [task.__dict__ for task in tasks if task.grader is not None]
+        for diff, tasks in ALL_TASKS.items()
+    }
+    return graded_tasks  # {"easy": [tasks], "medium": [tasks], "hard": [tasks]}
+
+
 @app.get("/")
 async def root():
     return {
         "name": "SQL Correction RL Environment",
         "version": "1.0.0",
-        "endpoints": ["/reset", "/step", "/state", "/health"],
+        "endpoints": ["/reset", "/step", "/state", "/health", "/tasks"],
         "tasks": ["easy", "medium", "hard"],
     }
 
 
 def main():
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=7860)
 
 
