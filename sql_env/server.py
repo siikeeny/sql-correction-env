@@ -124,3 +124,26 @@ def main():
 
 if __name__ == "__main__":
     main()
+@app.post("/grader")
+async def grader_endpoint(request: dict):
+    """Grader endpoint called by validator to score a task directly."""
+    from sql_env.grader import grade
+    from sql_env.tasks import TASK_SETS
+    import random
+
+    task_name = request.get("task_name", "easy")
+    action_data = request.get("action", {})
+    corrected_query = action_data.get("corrected_query", "")
+
+    tasks = TASK_SETS.get(task_name, TASK_SETS["easy"])
+    task = random.choice(tasks)
+
+    action = SQLAction(corrected_query=corrected_query)
+    reward_obj = grade(action, task)
+
+    return {
+        "task_name": task_name,
+        "score": reward_obj.value,
+        "reason": reward_obj.reason,
+        "success": reward_obj.value >= 0.95,
+    }
