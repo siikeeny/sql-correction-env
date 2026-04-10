@@ -99,35 +99,35 @@ async def health():
 
 @app.get("/tasks")
 async def list_tasks():
-    """Return graded tasks in openenv validator format."""
     return {
         "tasks": [
             {
                 "name": "easy",
-                "difficulty": "easy", 
+                "difficulty": "easy",
                 "description": "Fix a single syntax error. Error hint provided.",
                 "max_steps": 5,
                 "has_grader": True,
-                "grader": "grade",
+                "grader": "sql_env.grader.grade",
             },
             {
                 "name": "medium",
                 "difficulty": "medium",
-                "description": "Fix multiple errors across keywords and clauses. No hint.",
+                "description": "Fix multiple errors. No hint.",
                 "max_steps": 5,
                 "has_grader": True,
-                "grader": "grade",
+                "grader": "sql_env.grader.grade",
             },
             {
                 "name": "hard",
                 "difficulty": "hard",
-                "description": "Fix many errors in complex multi-join queries. Schema provided.",
+                "description": "Fix complex multi-join queries. Schema provided.",
                 "max_steps": 4,
                 "has_grader": True,
-                "grader": "grade",
+                "grader": "sql_env.grader.grade",
             },
         ]
     }
+
 
 @app.get("/")
 async def root():
