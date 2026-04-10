@@ -6,10 +6,11 @@ Exposes the OpenEnv-required endpoints: /reset, /step, /state + /tasks for valid
 
 from contextlib import asynccontextmanager
 from typing import Optional
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from openenv.core.env_server import Environment
+
 from sql_env import SQLAction, SQLCorrectionEnv
 from sql_env.tasks import ALL_TASKS
 
@@ -98,39 +99,12 @@ async def health():
 
 @app.get("/tasks")
 async def list_tasks():
-    """Return graded tasks in openenv validator format."""
-    from sql_env.grader import grade
-    return {
-        "tasks": [
-            {
-                "name": "easy",
-                "difficulty": "easy",
-                "description": "Fix a single syntax error. Error hint provided.",
-                "max_steps": 5,
-                "has_grader": True,
-                "grader": "sql_env.grader.grade",
-                "grader_fn": grade.__module__ + "." + grade.__qualname__,
-            },
-            {
-                "name": "medium",
-                "difficulty": "medium",
-                "description": "Fix multiple errors. No hint.",
-                "max_steps": 5,
-                "has_grader": True,
-                "grader": "sql_env.grader.grade",
-                "grader_fn": grade.__module__ + "." + grade.__qualname__,
-            },
-            {
-                "name": "hard",
-                "difficulty": "hard",
-                "description": "Fix complex multi-join queries. Schema provided.",
-                "max_steps": 4,
-                "has_grader": True,
-                "grader": "sql_env.grader.grade",
-                "grader_fn": grade.__module__ + "." + grade.__qualname__,
-            },
-        ]
+    """Return graded tasks by difficulty (RL validator format)."""
+    graded_tasks = {
+        diff: [task.__dict__ for task in tasks if task.grader is not None]
+        for diff, tasks in ALL_TASKS.items()
     }
+    return graded_tasks  # {"easy": [tasks], "medium": [tasks], "hard": [tasks]}
 
 
 @app.get("/")
