@@ -99,13 +99,35 @@ async def health():
 
 @app.get("/tasks")
 async def list_tasks():
-    """Return graded tasks by difficulty (RL validator format)."""
-    graded_tasks = {
-        diff: [task.__dict__ for task in tasks if task.grader is not None]
-        for diff, tasks in ALL_TASKS.items()
+    """Return graded tasks in openenv validator format."""
+    return {
+        "tasks": [
+            {
+                "name": "easy",
+                "difficulty": "easy", 
+                "description": "Fix a single syntax error. Error hint provided.",
+                "max_steps": 5,
+                "has_grader": True,
+                "grader": "grade",
+            },
+            {
+                "name": "medium",
+                "difficulty": "medium",
+                "description": "Fix multiple errors across keywords and clauses. No hint.",
+                "max_steps": 5,
+                "has_grader": True,
+                "grader": "grade",
+            },
+            {
+                "name": "hard",
+                "difficulty": "hard",
+                "description": "Fix many errors in complex multi-join queries. Schema provided.",
+                "max_steps": 4,
+                "has_grader": True,
+                "grader": "grade",
+            },
+        ]
     }
-    return graded_tasks  # {"easy": [tasks], "medium": [tasks], "hard": [tasks]}
-
 
 @app.get("/")
 async def root():

@@ -25,10 +25,9 @@ class SQLTask(BaseModel):
     schema_context: Optional[str] = None
     error_hint: Optional[str] = None
     max_steps: int = 5
-    grader: Optional[Callable] = None  # ← add this
+    grader: Optional[Any] = Field(default=None, exclude=True)
 
-    class Config:
-        arbitrary_types_allowed = True  # ← required for Callable in Pydantic
+    model_config = {"arbitrary_types_allowed": True}
 
 class StepResult(BaseModel):
     observation: SQLObservation
