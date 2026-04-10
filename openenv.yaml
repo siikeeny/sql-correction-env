@@ -1,59 +1,27 @@
+---
+title: SQL Correction RL Environment
+emoji: 🛢️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+tags:
+  - openenv
+---
+
 spec_version: 1
 name: sql-correction-env
-version: "1.0.0"
+type: sequential
+runtime: docker
+app: server.app:app
+port: 7860
+
 description: >
   An OpenEnv RL environment where an AI agent fixes broken SQL queries.
   Simulates a real developer task: identifying and correcting SQL syntax
   and logical errors across easy, medium, and hard difficulty levels.
+
 author: SyncShift
-tags:
-  - openenv
-  - sql
-  - code-correction
-  - real-world
-
-observation_space:
-  type: object
-  fields:
-    task_id:
-      type: string
-      description: Unique identifier for the current task
-    broken_query:
-      type: string
-      description: The malformed SQL query the agent must fix
-    schema_context:
-      type: string
-      nullable: true
-      description: Table and column definitions when a task includes schema context
-    error_hint:
-      type: string
-      nullable: true
-      description: A hint describing the type of error (provided on easy tasks only)
-    step_number:
-      type: integer
-      description: Current step index within the episode
-    previous_attempt:
-      type: string
-      nullable: true
-      description: The agent's last submitted corrected query
-    feedback:
-      type: string
-      nullable: true
-      description: Grader feedback from the previous step
-
-action_space:
-  type: object
-  fields:
-    corrected_query:
-      type: string
-      description: The agent's corrected SQL query
-
-reward:
-  range: [0.001, 0.999]
-  description: >
-    1.0 = exact match, 0.7 = right tokens minor structure diff,
-    0.4 = most keywords correct, 0.2 = basic structure present, 0.0 = invalid SQL.
-    Stagnation penalty of 0.1 applied after 2 consecutive identical rewards.
 
 tasks:
   - name: easy
@@ -71,13 +39,39 @@ tasks:
   - name: hard
     difficulty: hard
     max_steps: 4
-    description: Fix many errors in complex multi-join queries. Schema provided. No hint.
+    description: Fix many errors in complex multi-join queries. Schema provided.
     grader: sql_env.grader.grade
 
-endpoints:
-  reset: POST /reset
-  step:  POST /step
-  state: POST /state
-  tasks: GET /tasks
-  grader: POST /grader
-  health: GET /health
+observation_space:
+  type: object
+  fields:
+    task_id:
+      type: string
+    broken_query:
+      type: string
+    schema_context:
+      type: string
+      nullable: true
+    error_hint:
+      type: string
+      nullable: true
+    step_number:
+      type: integer
+    previous_attempt:
+      type: string
+      nullable: true
+    feedback:
+      type: string
+      nullable: true
+
+action_space:
+  type: object
+  fields:
+    corrected_query:
+      type: string
+
+reward:
+  range: [0.001, 0.999]
+  description: >
+    0.999 = exact match, 0.7 = right tokens minor structure diff,
+    0.4 = most keywords correct, 0.2 = basic structure present, 0.001 = invalid SQL.
