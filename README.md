@@ -144,3 +144,4 @@ SQL_ENV_TASK=hard   python inference.py
 | POST   | `/step`   | Submit action, returns result      |
 | POST   | `/state`  | Get current episode state          |
 | GET    | `/health` | Health check                       |
+# rebuilt
