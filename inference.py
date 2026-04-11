@@ -216,9 +216,7 @@ async def run_task(task_name: str) -> None:
 
                 # Submit action to environment
                 try:
-                    step_resp = await http.post(
-                        "/step", json={"corrected_query": action_str}
-                    )
+                    step_resp = await http.post("/step", json={"action":{"corrected_query": action_str}})
                     step_resp.raise_for_status()
                     result = step_resp.json()
                 except Exception as exc:

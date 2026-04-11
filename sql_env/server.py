@@ -106,3 +106,16 @@ def main():
 
 if __name__ == "__main__":
     main()
+from fastapi import Request
+
+@app.get("/tasks")
+async def list_tasks():
+    """Return graded tasks in openenv validator format."""
+    from sql_env.grader import grade
+    return {
+        "tasks": [
+            {"id": "easy", "difficulty": "easy", "description": "Fix a single syntax error.", "steps": 5, "ideal_action": "correct_sql", "has_grader": True},
+            {"id": "medium", "difficulty": "medium", "description": "Fix multiple errors.", "steps": 5, "ideal_action": "correct_sql", "has_grader": True},
+            {"id": "hard", "difficulty": "hard", "description": "Fix complex multi-join queries.", "steps": 4, "ideal_action": "correct_sql", "has_grader": True},
+        ]
+    }
