@@ -25,22 +25,16 @@ author: SyncShift
 
 tasks:
   - id: easy
-    difficulty: easy
-    max_steps: 5
     description: Fix a single syntax error. Error hint provided.
     steps: 5
     ideal_action: correct_sql
 
   - id: medium
-    difficulty: medium
-    max_steps: 5
     description: Fix multiple errors across keywords and clauses. No hint.
     steps: 5
     ideal_action: correct_sql
 
   - id: hard
-    difficulty: hard
-    max_steps: 4
     description: Fix many errors in complex multi-join queries. Schema provided.
     steps: 4
     ideal_action: correct_sql
