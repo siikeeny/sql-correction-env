@@ -3,7 +3,7 @@ FastAPI server using openenv.core base classes — required for validator.
 """
 import random
 from typing import Optional
-from openenv.core.env_server import create_fastapi_app
+from openenv.core.env_server.http_server import create_app
 from openenv.core.env_server.interfaces import Environment
 from openenv.core.env_server.types import State
 
@@ -91,11 +91,12 @@ class SQLCorrectionEnvironment(Environment):
             rewards_history=self._rewards_history,
         )
 
-
-app = create_fastapi_app(
+app = create_app(
     SQLCorrectionEnvironment,
     SQLAction,
     SQLObservation,
+    env_name="sql-correction-env",
+    max_concurrent_envs=10,
 )
 
 
