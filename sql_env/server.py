@@ -50,26 +50,30 @@ class SQLCorrectionEnvironment(Environment):
             done=False,
         )
     
-    def step(self, action: SQLAction) -> SQLObservation:
-        self._step_count += 1
-        reward_obj = grade(action, self._current_task)
-        reward = reward_obj.value
-        self._last_reward = reward
-        self._rewards_history.append(reward)
-        done = (reward >= 0.95) or (self._step_count >= self._current_task.max_steps)
-        self._done = done
-        feedback = generate_feedback(action, self._current_task, reward_obj)
-        return SQLObservation(
-            task_id=self._current_task.task_id,
-            broken_query=self._current_task.broken_query,
-            schema_context=self._current_task.schema_context,
-            error_hint=self._current_task.error_hint,
-            step_number=self._step_count,
-            previous_attempt=action.corrected_query,
-            feedback=feedback,
-            reward=reward,
-            done=done,
-        )
+def step(self, action: SQLAction) -> SQLObservation:
+    # Auto-reset if no task loaded (create_app may use fresh instances)
+    if self._current_task is None:
+        self.reset()
+    
+    self._step_count += 1
+    reward_obj = grade(action, self._current_task)
+    reward = reward_obj.value
+    self._last_reward = reward
+    self._rewards_history.append(reward)
+    done = (reward >= 0.95) or (self._step_count >= self._current_task.max_steps)
+    self._done = done
+    feedback = generate_feedback(action, self._current_task, reward_obj)
+    return SQLObservation(
+        task_id=self._current_task.task_id,
+        broken_query=self._current_task.broken_query,
+        schema_context=self._current_task.schema_context,
+        error_hint=self._current_task.error_hint,
+        step_number=self._step_count,
+        previous_attempt=action.corrected_query,
+        feedback=feedback,
+        reward=reward,
+        done=done,
+    )
 
     @property
     def state(self) -> SQLState:
