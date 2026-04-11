@@ -96,7 +96,6 @@ app = create_fastapi_app(
     SQLCorrectionEnvironment,
     SQLAction,
     SQLObservation,
-    env_name="sql-correction-env",
 )
 
 
