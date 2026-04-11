@@ -275,7 +275,7 @@ async def main() -> None:
     Otherwise run all three in sequence so all 3 tasks produce scores.
     """
     try:
-       # Always run all 3 tasks — validator counts 3 [END] lines
+        # Always run all 3 tasks — validator counts 3 [END] lines
         for difficulty in ("easy", "medium", "hard"):
             await run_task(difficulty)
             print("", flush=True)
