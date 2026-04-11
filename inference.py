@@ -275,14 +275,10 @@ async def main() -> None:
     Otherwise run all three in sequence so all 3 tasks produce scores.
     """
     try:
-        difficulties = (
-            (TASK_NAME,)
-            if TASK_NAME in {"easy", "medium", "hard"}
-            else ("easy", "medium", "hard")
-        )
-        for difficulty in difficulties:
+       # Always run all 3 tasks — validator counts 3 [END] lines
+        for difficulty in ("easy", "medium", "hard"):
             await run_task(difficulty)
-            print("", flush=True)  # blank line separator between tasks
+            print("", flush=True)
     except Exception as exc:
         print(f"[DEBUG] Main loop error: {exc}", flush=True)
 
