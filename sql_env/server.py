@@ -1,120 +1,103 @@
 """
-FastAPI HTTP wrapper for SQLCorrectionEnv.
-
-Exposes the OpenEnv-required endpoints: /reset, /step, /state + /tasks for validator.
+FastAPI server using openenv.core base classes — required for validator.
 """
-
-from contextlib import asynccontextmanager
+import random
 from typing import Optional
+from openenv.core.env_server import create_fastapi_app
+from openenv.core.env_server.interfaces import Environment
+from openenv.core.env_server.types import State
 
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-
-from sql_env import SQLAction, SQLCorrectionEnv
-from sql_env.tasks import ALL_TASKS
-
-
-class ResetRequest(BaseModel):
-    difficulty: Optional[str] = "easy"
-    task_name: Optional[str] = None
-    task_index: Optional[int] = None
-
-
-class StepRequest(BaseModel):
-    corrected_query: str
+try:
+    from sql_env.models import SQLAction, SQLObservation, SQLState
+    from sql_env.tasks import TASK_SETS
+    from sql_env.grader import grade, generate_feedback
+except ImportError:
+    from models import SQLAction, SQLObservation, SQLState
+    from tasks import TASK_SETS
+    from grader import grade, generate_feedback
 
 
-env: Optional[SQLCorrectionEnv] = None
+class SQLCorrectionEnvironment(Environment):
+
+    def __init__(self):
+        super().__init__()
+        self._difficulty = "easy"
+        self._current_task = None
+        self._step_count = 0
+        self._done = False
+        self._last_reward = 0.0
+        self._rewards_history = []
+
+    def reset(self, difficulty: str = "easy") -> SQLObservation:
+        self._difficulty = difficulty
+        tasks = TASK_SETS.get(difficulty, TASK_SETS["easy"])
+        self._current_task = random.choice(tasks)
+        self._step_count = 0
+        self._done = False
+        self._last_reward = 0.0
+        self._rewards_history = []
+        return SQLObservation(
+            task_id=self._current_task.task_id,
+            broken_query=self._current_task.broken_query,
+            schema_context=self._current_task.schema_context,
+            error_hint=self._current_task.error_hint,
+            step_number=0,
+            previous_attempt=None,
+            feedback=None,
+            reward=0.0,
+            done=False,
+        )
+
+    def step(self, action: SQLAction) -> SQLObservation:
+        self._step_count += 1
+        reward_obj = grade(action, self._current_task)
+        reward = reward_obj.value
+        self._last_reward = reward
+        self._rewards_history.append(reward)
+        done = (reward >= 0.95) or (self._step_count >= self._current_task.max_steps)
+        self._done = done
+        feedback = generate_feedback(action, self._current_task, reward_obj)
+        return SQLObservation(
+            task_id=self._current_task.task_id,
+            broken_query=self._current_task.broken_query,
+            schema_context=self._current_task.schema_context,
+            error_hint=self._current_task.error_hint,
+            step_number=self._step_count,
+            previous_attempt=action.corrected_query,
+            feedback=feedback,
+            reward=reward,
+            done=done,
+        )
+
+    @property
+    def state(self) -> SQLState:
+        if self._current_task is None:
+            return SQLState(
+                task_id="none",
+                difficulty="none",
+                step_count=0,
+                max_steps=0,
+                done=False,
+                last_reward=0.0,
+                rewards_history=[],
+            )
+        return SQLState(
+            task_id=self._current_task.task_id,
+            difficulty=self._difficulty,
+            step_count=self._step_count,
+            max_steps=self._current_task.max_steps,
+            done=self._done,
+            last_reward=self._last_reward,
+            rewards_history=self._rewards_history,
+        )
 
 
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    global env
-    env = SQLCorrectionEnv(difficulty="easy")
-    yield
-    if env is not None:
-        await env.close()
-
-
-app = FastAPI(
-    title="SQL Correction RL Environment",
-    description="OpenEnv-compliant environment for SQL query correction tasks.",
-    version="1.0.0",
-    lifespan=lifespan,
+app = create_fastapi_app(
+    SQLCorrectionEnvironment,
+    SQLAction,
+    SQLObservation,
+    env_name="sql-correction-env",
 )
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@app.post("/reset")
-async def reset(request: ResetRequest = ResetRequest()):
-    """Reset the environment and return the initial observation."""
-    global env
-    difficulty = request.task_name or request.difficulty or "easy"
-    if difficulty not in {"easy", "medium", "hard"}:
-        raise HTTPException(status_code=400, detail="difficulty must be easy, medium, or hard")
-
-    env = SQLCorrectionEnv(
-        difficulty=difficulty,
-        task_index=request.task_index,
-    )
-    obs = await env.reset()
-    return obs.model_dump()
-
-
-@app.post("/step")
-async def step(request: StepRequest):
-    """Take one step and return the new observation, reward, done flag, and info."""
-    global env
-    if env is None:
-        raise HTTPException(status_code=400, detail="Call /reset first.")
-
-    try:
-        action = SQLAction(corrected_query=request.corrected_query)
-        result = await env.step(action)
-        return result.model_dump()
-    except RuntimeError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@app.post("/state")
-async def state():
-    """Return current environment state."""
-    global env
-    if env is None:
-        return {"status": "not_initialized"}
-    return await env.state()
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok", "service": "sql-correction-env"}
-
-
-@app.get("/tasks")
-async def list_tasks():
-    """Return graded tasks by difficulty (RL validator format)."""
-    graded_tasks = {
-        diff: [task.__dict__ for task in tasks if task.grader is not None]
-        for diff, tasks in ALL_TASKS.items()
-    }
-    return graded_tasks  # {"easy": [tasks], "medium": [tasks], "hard": [tasks]}
-
-
-@app.get("/")
-async def root():
-    return {
-        "name": "SQL Correction RL Environment",
-        "version": "1.0.0",
-        "endpoints": ["/reset", "/step", "/state", "/health", "/tasks"],
-        "tasks": ["easy", "medium", "hard"],
-    }
 
 
 def main():
@@ -124,26 +107,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-@app.post("/grader")
-async def grader_endpoint(request: dict):
-    """Grader endpoint called by validator to score a task directly."""
-    from sql_env.grader import grade
-    from sql_env.tasks import TASK_SETS
-    import random
-
-    task_name = request.get("task_name", "easy")
-    action_data = request.get("action", {})
-    corrected_query = action_data.get("corrected_query", "")
-
-    tasks = TASK_SETS.get(task_name, TASK_SETS["easy"])
-    task = random.choice(tasks)
-
-    action = SQLAction(corrected_query=corrected_query)
-    reward_obj = grade(action, task)
-
-    return {
-        "task_name": task_name,
-        "score": reward_obj.value,
-        "reason": reward_obj.reason,
-        "success": reward_obj.value >= 0.95,
-    }

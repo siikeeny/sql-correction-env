@@ -24,23 +24,26 @@ description: >
 author: SyncShift
 
 tasks:
-  - name: easy
+  - id: easy
     difficulty: easy
     max_steps: 5
     description: Fix a single syntax error. Error hint provided.
-    grader: sql_env.grader.grade
+    steps: 5
+    ideal_action: correct_sql
 
-  - name: medium
+  - id: medium
     difficulty: medium
     max_steps: 5
     description: Fix multiple errors across keywords and clauses. No hint.
-    grader: sql_env.grader.grade
+    steps: 5
+    ideal_action: correct_sql
 
-  - name: hard
+  - id: hard
     difficulty: hard
     max_steps: 4
     description: Fix many errors in complex multi-join queries. Schema provided.
-    grader: sql_env.grader.grade
+    steps: 4
+    ideal_action: correct_sql
 
 observation_space:
   type: object
@@ -75,3 +78,13 @@ reward:
   description: >
     0.999 = exact match, 0.7 = right tokens minor structure diff,
     0.4 = most keywords correct, 0.2 = basic structure present, 0.001 = invalid SQL.
+
+scoring:
+  reward_range: [0.001, 0.999]
+  success_threshold: 0.5
+  score_formula: mean(step_rewards)
+
+constraints:
+  max_runtime_seconds: 1200
+  max_memory_gb: 8
+  max_vcpu: 2

@@ -1,7 +1,13 @@
-from pydantic import BaseModel, Field
-from typing import Optional, Any, Dict, Callable
+from typing import List, Optional, Any, Dict
+from openenv.core.env_server.types import Action, Observation, State
+from pydantic import Field
 
-class SQLObservation(BaseModel):
+
+class SQLAction(Action):
+    corrected_query: str
+
+
+class SQLObservation(Observation):
     task_id: str
     broken_query: str
     schema_context: Optional[str] = None
@@ -9,28 +15,15 @@ class SQLObservation(BaseModel):
     step_number: int
     previous_attempt: Optional[str] = None
     feedback: Optional[str] = None
+    reward: float = 0.0
+    done: bool = False
 
-class SQLAction(BaseModel):
-    corrected_query: str
 
-class SQLReward(BaseModel):
-    value: float = Field(gt=0.0, lt=1.0)  # strictly between, not ge/le
-    reason: str
-
-class SQLTask(BaseModel):
+class SQLState(State):
     task_id: str
     difficulty: str
-    broken_query: str
-    canonical_answer: str
-    schema_context: Optional[str] = None
-    error_hint: Optional[str] = None
-    max_steps: int = 5
-    grader: Optional[Any] = Field(default=None, exclude=True)
-
-    model_config = {"arbitrary_types_allowed": True}
-
-class StepResult(BaseModel):
-    observation: SQLObservation
-    reward: float
+    step_count: int
+    max_steps: int
     done: bool
-    info: Dict[str, Any] = Field(default_factory=dict)
+    last_reward: float
+    rewards_history: List[float]
