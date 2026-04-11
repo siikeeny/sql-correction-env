@@ -28,26 +28,28 @@ class SQLCorrectionEnvironment(Environment):
         self._last_reward = 0.0
         self._rewards_history = []
 
-    def reset(self, difficulty: str = "easy") -> SQLObservation:
-        self._difficulty = difficulty
-        tasks = TASK_SETS.get(difficulty, TASK_SETS["easy"])
-        self._current_task = random.choice(tasks)
-        self._step_count = 0
-        self._done = False
-        self._last_reward = 0.0
-        self._rewards_history = []
-        return SQLObservation(
-            task_id=self._current_task.task_id,
-            broken_query=self._current_task.broken_query,
-            schema_context=self._current_task.schema_context,
-            error_hint=self._current_task.error_hint,
-            step_number=0,
-            previous_attempt=None,
-            feedback=None,
-            reward=0.0,
-            done=False,
-        )
-
+    def reset(self, difficulty: str = "easy", task_id: str = None, **kwargs) -> SQLObservation:
+    # task_id and difficulty are the same thing in our env
+    actual_difficulty = task_id or difficulty or "easy"
+    self._difficulty = actual_difficulty
+    tasks = TASK_SETS.get(actual_difficulty, TASK_SETS["easy"])
+    self._current_task = random.choice(tasks)
+    self._step_count = 0
+    self._done = False
+    self._last_reward = 0.0
+    self._rewards_history = []
+    return SQLObservation(
+        task_id=self._current_task.task_id,
+        broken_query=self._current_task.broken_query,
+        schema_context=self._current_task.schema_context,
+        error_hint=self._current_task.error_hint,
+        step_number=0,
+        previous_attempt=None,
+        feedback=None,
+        reward=0.0,
+        done=False,
+    )
+    
     def step(self, action: SQLAction) -> SQLObservation:
         self._step_count += 1
         reward_obj = grade(action, self._current_task)
@@ -111,12 +113,10 @@ from fastapi import Request
 
 @app.get("/tasks")
 async def list_tasks():
-    """Return graded tasks in openenv validator format."""
-    from sql_env.grader import grade
     return {
         "tasks": [
-            {"id": "easy", "difficulty": "easy", "description": "Fix a single syntax error.", "steps": 5, "ideal_action": "correct_sql", "has_grader": True},
-            {"id": "medium", "difficulty": "medium", "description": "Fix multiple errors.", "steps": 5, "ideal_action": "correct_sql", "has_grader": True},
-            {"id": "hard", "difficulty": "hard", "description": "Fix complex multi-join queries.", "steps": 4, "ideal_action": "correct_sql", "has_grader": True},
+            {"id": "easy", "difficulty": "easy", "description": "Fix a single syntax error.", "steps": 5, "ideal_action": "correct_sql", "has_grader": True, "grader": "sql_env.grader.grade"},
+            {"id": "medium", "difficulty": "medium", "description": "Fix multiple errors.", "steps": 5, "ideal_action": "correct_sql", "has_grader": True, "grader": "sql_env.grader.grade"},
+            {"id": "hard", "difficulty": "hard", "description": "Fix complex multi-join queries.", "steps": 4, "ideal_action": "correct_sql", "has_grader": True, "grader": "sql_env.grader.grade"},
         ]
     }
