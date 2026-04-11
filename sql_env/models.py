@@ -15,7 +15,7 @@ class SQLObservation(Observation):
     step_number: int
     previous_attempt: Optional[str] = None
     feedback: Optional[str] = None
-    reward: float = 0.0
+    reward: float = 0.001
     done: bool = False
 
 

@@ -46,7 +46,7 @@ class SQLCorrectionEnvironment(Environment):
             step_number=0,
             previous_attempt=None,
             feedback=None,
-            reward=0.0,
+            reward=0.001,
             done=False,
         )
     
@@ -80,7 +80,7 @@ class SQLCorrectionEnvironment(Environment):
                 step_count=0,
                 max_steps=0,
                 done=False,
-                last_reward=0.0,
+                last_reward=0.001,
                 rewards_history=[],
             )
         return SQLState(
