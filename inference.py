@@ -197,7 +197,8 @@ async def run_task(task_name: str) -> None:
         try:
             reset_resp = await http.post("/reset", json={"difficulty": task_name})
             reset_resp.raise_for_status()
-            obs = reset_resp.json()
+            reset_data = reset_resp.json()
+            obs = reset_data.get("observation", reset_data)
         except Exception as exc:
             print(f"[DEBUG] Reset failed: {exc}", flush=True)
             # Do NOT return here — fall through to finally so [END] is always logged
