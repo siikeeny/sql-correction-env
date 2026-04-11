@@ -96,7 +96,7 @@ app = create_app(
     SQLAction,
     SQLObservation,
     env_name="sql-correction-env",
-    max_concurrent_envs=10,
+    max_concurrent_envs=1,
 )
 
 
