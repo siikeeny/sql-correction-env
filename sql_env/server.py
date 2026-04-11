@@ -29,26 +29,26 @@ class SQLCorrectionEnvironment(Environment):
         self._rewards_history = []
 
     def reset(self, difficulty: str = "easy", task_id: str = None, **kwargs) -> SQLObservation:
-    # task_id and difficulty are the same thing in our env
-    actual_difficulty = task_id or difficulty or "easy"
-    self._difficulty = actual_difficulty
-    tasks = TASK_SETS.get(actual_difficulty, TASK_SETS["easy"])
-    self._current_task = random.choice(tasks)
-    self._step_count = 0
-    self._done = False
-    self._last_reward = 0.0
-    self._rewards_history = []
-    return SQLObservation(
-        task_id=self._current_task.task_id,
-        broken_query=self._current_task.broken_query,
-        schema_context=self._current_task.schema_context,
-        error_hint=self._current_task.error_hint,
-        step_number=0,
-        previous_attempt=None,
-        feedback=None,
-        reward=0.0,
-        done=False,
-    )
+        # task_id and difficulty are the same thing in our env
+        actual_difficulty = task_id or difficulty or "easy"
+        self._difficulty = actual_difficulty
+        tasks = TASK_SETS.get(actual_difficulty, TASK_SETS["easy"])
+        self._current_task = random.choice(tasks)
+        self._step_count = 0
+        self._done = False
+        self._last_reward = 0.0
+        self._rewards_history = []
+        return SQLObservation(
+            task_id=self._current_task.task_id,
+            broken_query=self._current_task.broken_query,
+            schema_context=self._current_task.schema_context,
+            error_hint=self._current_task.error_hint,
+            step_number=0,
+            previous_attempt=None,
+            feedback=None,
+            reward=0.0,
+            done=False,
+        )
     
     def step(self, action: SQLAction) -> SQLObservation:
         self._step_count += 1
