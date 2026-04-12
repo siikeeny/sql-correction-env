@@ -33,7 +33,7 @@ class SQLCorrectionEnv:
         self._done: bool = False
         self._previous_attempt: Optional[str] = None
         self._last_feedback: Optional[str] = None
-        self._last_reward: float = 0.0
+        self._last_reward: float = 0.01
         self._stagnation_count: int = 0
 
     # ── OpenEnv Interface ─────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ class SQLCorrectionEnv:
         self._done = False
         self._previous_attempt = None
         self._last_feedback = None
-        self._last_reward = 0.0
+        self._last_reward = 0.01
         self._stagnation_count = 0
 
         return self._make_observation()
@@ -77,14 +77,16 @@ class SQLCorrectionEnv:
                 reward = max(0.01, reward - 0.1)
         else:
             self._stagnation_count = 0
-
+        # Final Clamp
+        reward = max(0.01, min(0.98, reward))
+        
         self._last_reward = reward
 
         feedback = generate_feedback(action, self._task, reward_model)
         self._last_feedback = feedback
         self._previous_attempt = action.corrected_query
 
-        done = reward_model.value >= 0.95 or self._step_count >= self._task.max_steps
+        done = reward >= 0.95 or self._step_count >= self._task.max_steps
         self._done = done
 
         obs = self._make_observation()

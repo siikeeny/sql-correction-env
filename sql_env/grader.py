@@ -34,7 +34,7 @@ def _sql_keywords_present(query: str) -> set:
 
 def _clamp(value: float) -> float:
     """Ensure reward is strictly within (0, 1) as required by the OpenEnv spec."""
-    return max(0.01, min(0.99, value))
+    return max(0.02, min(0.98, value))
 
 
 def grade(action: SQLAction, task: SQLTask) -> SQLReward:
@@ -55,7 +55,7 @@ def grade(action: SQLAction, task: SQLTask) -> SQLReward:
     # ── Level 1: Exact match ─────────────────────────────────────────────────
     if agent == correct:
         return SQLReward(
-            value=_clamp(0.99),
+            value=_clamp(0.98),
             reason="Exact match — perfect correction.",
         )
 
@@ -106,7 +106,7 @@ def grade(action: SQLAction, task: SQLTask) -> SQLReward:
 
 def generate_feedback(action: SQLAction, task: SQLTask, reward: SQLReward) -> str:
     """Human-readable feedback shown in the next observation."""
-    if reward.value >= 0.99:
+    if reward.value >= 0.98:
         return "Correct! Query matches perfectly."
     if reward.value >= 0.70:
         return "Very close — check spacing or minor clause differences."

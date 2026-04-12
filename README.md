@@ -66,18 +66,18 @@ wrong answer across steps.
 
 | Score | Condition |
 |-------|-----------|
-| `1.0` | Exact match after normalization (perfect fix) |
+| `0.99` | Exact match after normalization (perfect fix) |
 | `0.7` | All correct tokens present, structure slightly off |
 | `0.4` | Most keywords correct and token overlap is high (≥85% keywords, ≥75% tokens) |
 | `0.3` | Partial keyword and structure match (≥65% keywords, ≥50% tokens) |
 | `0.2` | Basic `SELECT ... FROM ...` structure present |
-| `0.0` | Response is not valid SQL |
+| `0.01` | Response is not valid SQL |
 
 A **stagnation penalty** of `−0.1` is applied when the agent submits the same
 reward-equivalent answer for two or more consecutive steps, encouraging active
 correction rather than looping.
 
-Episodes terminate when reward = 1.0 (success) or max steps is reached.
+Episodes terminate when reward reaches `0.99` (success) or max steps is reached.
 
 ---
 

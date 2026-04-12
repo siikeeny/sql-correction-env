@@ -76,15 +76,15 @@ action_space:
       type: string
 
 reward:
-  range: [0.0, 1.0]
+  range: [0.01, 0.99]
   description: >
-    1.0 = exact match, 0.7 = right tokens minor structure diff,
+    0.99 = exact match, 0.7 = right tokens minor structure diff,
     0.4 = most keywords correct, 0.3 = partial match,
-    0.2 = basic structure present, 0.0 = invalid SQL.
+    0.2 = basic structure present, 0.01 = invalid SQL.
     Stagnation penalty of -0.1 applied after 2+ identical-reward steps.
 
 scoring:
-  reward_range: [0.0, 1.0]
+  reward_range: [0.01, 0.99]
   success_threshold: 0.5
   score_formula: mean(step_rewards)
 

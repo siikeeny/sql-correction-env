@@ -23,7 +23,7 @@ class SQLCorrectionEnvironment(Environment):
         self._current_task = None
         self._step_count = 0
         self._done = False
-        self._last_reward = 0.0
+        self._last_reward = 0.01
         self._rewards_history = []
         self._stagnation_count = 0
 
@@ -38,7 +38,7 @@ class SQLCorrectionEnvironment(Environment):
         self._current_task = random.choice(tasks)
         self._step_count = 0
         self._done = False
-        self._last_reward = 0.0
+        self._last_reward = 0.01
         self._rewards_history = []
         self._stagnation_count = 0
         return self._make_observation(previous_attempt=None, feedback=None)
@@ -58,15 +58,18 @@ class SQLCorrectionEnvironment(Environment):
                 reward = max(0.01, reward - 0.1)
         else:
             self._stagnation_count = 0
-
+        # Final Clamp  
+        reward = max(0.01, min(0.98, reward))
+          
         self._last_reward = reward
+
         self._rewards_history.append(reward)
 
-        done = (reward_obj.value >= 0.95) or (
+        done = (reward >= 0.95) or (
             self._step_count >= self._current_task.max_steps
         )
         self._done = done
-        feedback = generate_feedback(action, self._current_task, reward_obj)
+        feedback = generate_feedback(action, self._current_task, reward)
 
         return self._make_observation(
             previous_attempt=action.corrected_query,
@@ -82,7 +85,7 @@ class SQLCorrectionEnvironment(Environment):
                 step_count=0,
                 max_steps=0,
                 done=False,
-                last_reward=0.0,
+                last_reward=0.01,
                 rewards_history=[],
             )
         return SQLState(

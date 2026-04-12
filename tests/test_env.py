@@ -29,13 +29,13 @@ def _action(query: str) -> SQLAction:
 # ── Grader unit tests ─────────────────────────────────────────────────────────
 
 class TestGrader:
-    def test_exact_match_returns_one(self):
+    def test_exact_match_returns_099(self):
         task = _make_task(
             "SELECT * FORM users",
             "SELECT * FROM users",
         )
         reward = grade(_action("SELECT * FROM users"), task)
-        assert reward.value == 1.0
+        assert reward.value == 0.99
 
     def test_exact_match_case_insensitive(self):
         task = _make_task(
@@ -43,7 +43,7 @@ class TestGrader:
             "SELECT * FROM users",
         )
         reward = grade(_action("select * from users"), task)
-        assert reward.value == 1.0
+        assert reward.value == 0.99
 
     def test_exact_match_trailing_semicolon(self):
         task = _make_task(
@@ -51,23 +51,23 @@ class TestGrader:
             "SELECT * FROM users",
         )
         reward = grade(_action("SELECT * FROM users;"), task)
-        assert reward.value == 1.0
+        assert reward.value == 0.99
 
-    def test_wrong_answer_not_one(self):
+    def test_wrong_answer_not_perfect(self):
         task = _make_task(
             "SELECT * FORM users",
             "SELECT * FROM users",
         )
         reward = grade(_action("SELECT * FORM users"), task)
-        assert reward.value < 1.0
+        assert reward.value < 0.99
 
-    def test_completely_wrong_returns_zero(self):
+    def test_completely_wrong_returns_001(self):
         task = _make_task(
             "SELECT * FORM users",
             "SELECT * FROM users",
         )
         reward = grade(_action("hello world"), task)
-        assert reward.value == 0.0
+        assert reward.value == 0.01
 
     def test_basic_structure_returns_02(self):
         task = _make_task(
@@ -78,7 +78,7 @@ class TestGrader:
         reward = grade(_action("SELECT * FORM users WHERE id = 1"), task)
         assert reward.value == pytest.approx(0.2, abs=0.05)
 
-    def test_reward_range(self):
+    def test_reward_range_is_strictly_open(self):
         task = _make_task(
             "SELCT * FORM users WEHRE id = 1",
             "SELECT * FROM users WHERE id = 1",
@@ -90,8 +90,8 @@ class TestGrader:
             "select * from users where id = 1",
         ]:
             reward = grade(_action(query), task)
-            assert 0.0 <= reward.value <= 1.0, (
-                f"Reward {reward.value} out of [0, 1] for query: {query}"
+            assert 0.0 < reward.value < 1.0, (
+                f"Reward {reward.value} out of (0, 1) for query: {query}"
             )
 
     def test_feedback_not_empty(self):
@@ -142,24 +142,24 @@ class TestTaskCatalogue:
                 )
 
     def test_grading_canonical_answer_returns_perfect(self):
-        """Every task must return 1.0 when given its own canonical answer."""
+        """Every task must return 0.99 when given its own canonical answer."""
         for difficulty, tasks in ALL_TASKS.items():
             for task in tasks:
                 action = _action(task.canonical_answer)
                 reward = grade(action, task)
-                assert reward.value == 1.0, (
-                    f"{task.task_id}: canonical answer did not score 1.0 "
+                assert reward.value == 0.99, (
+                    f"{task.task_id}: canonical answer did not score 0.99 "
                     f"(got {reward.value})"
                 )
 
     def test_grading_broken_query_below_perfect(self):
-        """Broken queries must score below 1.0."""
+        """Broken queries must score below the perfect 0.99 score."""
         for difficulty, tasks in ALL_TASKS.items():
             for task in tasks:
                 action = _action(task.broken_query)
                 reward = grade(action, task)
-                assert reward.value < 1.0, (
-                    f"{task.task_id}: broken query unexpectedly scored 1.0"
+                assert reward.value < 0.99, (
+                    f"{task.task_id}: broken query unexpectedly scored 0.99"
                 )
 
 
@@ -182,7 +182,7 @@ class TestEnvironment:
             env = SQLCorrectionEnv(difficulty="easy")
             await env.reset()
             result = await env.step(_action("SELECT * FROM users WHERE id = 1"))
-            assert 0.0 <= result.reward <= 1.0
+            assert 0.0 < result.reward < 1.0
             assert isinstance(result.done, bool)
             assert result.observation.step_number == 1
 
@@ -204,7 +204,7 @@ class TestEnvironment:
             canonical = EASY_TASKS[0].canonical_answer
             result = await env.step(_action(canonical))
             assert result.done is True
-            assert result.reward == pytest.approx(1.0)
+            assert result.reward == pytest.approx(0.99)
 
         asyncio.run(run())
 
