@@ -4,13 +4,16 @@ version = "1.0.0"
 description = "OpenEnv SQL Query Correction RL Environment"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi",
-    "uvicorn",
-    "pydantic",
-    "httpx",
-    "openai",
-    "openenv-core",
+    "fastapi>=0.135.0",
+    "uvicorn>=0.43.0",
+    "pydantic>=2.12.0",
+    "httpx>=0.28.1",
+    "openai>=2.7.2",
+    "openenv-core==0.2.3",
 ]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
 
 [build-system]
 requires = ["hatchling"]
@@ -21,3 +24,9 @@ packages = ["sql_env"]
 
 [project.scripts]
 server = "sql_env.server:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

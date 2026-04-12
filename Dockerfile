@@ -18,7 +18,8 @@ COPY . .
 EXPOSE 7860
 
 # health check so HF Space knows when it's ready
-HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:7860/health', timeout=3)"
 
+# server:app refers to the root server.py which re-exports app from sql_env.server
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]

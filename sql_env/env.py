@@ -13,7 +13,13 @@ class SQLCorrectionEnv:
 
     The agent receives a broken SQL query and must return the corrected version.
     Reward is shaped across the full trajectory — partial credit is given for
-    incremental improvements, penalizing stagnation and infinite loops.
+    incremental improvements, penalizing stagnation.
+
+    Usage::
+
+        env = SQLCorrectionEnv(difficulty="easy")
+        obs = await env.reset()
+        result = await env.step(SQLAction(corrected_query="SELECT * FROM users"))
     """
 
     def __init__(self, difficulty: str = "easy", task_index: Optional[int] = None):
@@ -30,7 +36,7 @@ class SQLCorrectionEnv:
         self._last_reward: float = 0.0
         self._stagnation_count: int = 0
 
-    # ── OpenEnv Interface ─────────────────────────────────────
+    # ── OpenEnv Interface ─────────────────────────────────────────────────────
 
     async def reset(self) -> SQLObservation:
         """Reset the environment and return the initial observation."""
@@ -61,27 +67,24 @@ class SQLCorrectionEnv:
 
         self._step_count += 1
 
-        # grade the action
         reward_model = grade(action, self._task)
         reward = reward_model.value
 
-        # detect stagnation (same reward twice in a row) — penalize
+        # Stagnation penalty
         if abs(reward - self._last_reward) < 0.01 and self._step_count > 1:
             self._stagnation_count += 1
             if self._stagnation_count >= 2:
-                reward = max(0.001, reward - 0.1)  # stagnation penalty
+                reward = max(0.0, reward - 0.1)
         else:
             self._stagnation_count = 0
 
         self._last_reward = reward
 
-        # generate feedback for the next observation
         feedback = generate_feedback(action, self._task, reward_model)
         self._last_feedback = feedback
         self._previous_attempt = action.corrected_query
 
-        # episode ends on perfect score or max steps reached
-        done = reward_model.value >= 0.99 or self._step_count >= self._task.max_steps
+        done = reward_model.value >= 0.95 or self._step_count >= self._task.max_steps
         self._done = done
 
         obs = self._make_observation()
@@ -95,7 +98,7 @@ class SQLCorrectionEnv:
                 "step": self._step_count,
                 "max_steps": self._task.max_steps,
                 "task_id": self._task.task_id,
-            }
+            },
         )
 
     async def state(self) -> dict:
@@ -117,16 +120,18 @@ class SQLCorrectionEnv:
         self._task = None
         self._done = True
 
-    # ── Internal ──────────────────────────────────────────────
+    # ── Internal ──────────────────────────────────────────────────────────────
 
     def _make_observation(self) -> SQLObservation:
         assert self._task is not None
+        steps_remaining = max(0, self._task.max_steps - self._step_count)
         return SQLObservation(
             task_id=self._task.task_id,
             broken_query=self._task.broken_query,
             schema_context=self._task.schema_context,
             error_hint=self._task.error_hint if self.difficulty == "easy" else None,
             step_number=self._step_count,
+            steps_remaining=steps_remaining,
             previous_attempt=self._previous_attempt,
             feedback=self._last_feedback,
         )

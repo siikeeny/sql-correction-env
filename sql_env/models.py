@@ -1,4 +1,4 @@
-from typing import List, Optional, Any, Callable
+from typing import List, Optional, Any
 from openenv.core.env_server.types import Action, Observation, State
 from pydantic import Field, BaseModel
 
@@ -8,15 +8,27 @@ class SQLAction(Action):
 
 
 class SQLObservation(Observation):
+    """
+    Observation returned to the agent each step.
+
+    Fields:
+        task_id:          Unique identifier for the current task instance.
+        broken_query:     The malformed SQL query the agent must fix.
+        schema_context:   Table/column definitions (hard tasks only).
+        error_hint:       Plain-language hint about the error (easy tasks only).
+        step_number:      Current step within the episode (0 = initial observation).
+        steps_remaining:  How many steps are left before the episode ends.
+        previous_attempt: The agent's SQL output from the previous step.
+        feedback:         Grader feedback on the previous attempt.
+    """
     task_id: str
     broken_query: str
     schema_context: Optional[str] = None
     error_hint: Optional[str] = None
     step_number: int
+    steps_remaining: Optional[int] = None
     previous_attempt: Optional[str] = None
     feedback: Optional[str] = None
-    reward: float = 0.001
-    done: bool = False
 
 
 class SQLState(State):
@@ -30,7 +42,8 @@ class SQLState(State):
 
 
 class SQLReward(BaseModel):
-    value: float = Field(gt=0.0, lt=1.0)
+    # Allow full [0.0, 1.0] range so perfect matches can return exactly 1.0
+    value: float = Field(ge=0.0, le=1.0)
     reason: str
 
 

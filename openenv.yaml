@@ -13,30 +13,36 @@ spec_version: 1
 name: sql-correction-env
 type: sequential
 runtime: docker
-app: server.app:app
+app: server:app
 port: 7860
 
 description: >
   An OpenEnv RL environment where an AI agent fixes broken SQL queries.
   Simulates a real developer task: identifying and correcting SQL syntax
   and logical errors across easy, medium, and hard difficulty levels.
+  Includes 40 tasks total with partial-credit grading and a stagnation penalty.
 
 author: SyncShift
 
 tasks:
   - id: easy
-    description: Fix a single syntax error. Error hint provided.
+    description: Fix a single keyword typo. Error hint provided.
     steps: 5
+    count: 15
     ideal_action: correct_sql
 
   - id: medium
     description: Fix multiple errors across keywords and clauses. No hint.
     steps: 5
+    count: 15
     ideal_action: correct_sql
 
   - id: hard
-    description: Fix many errors in complex multi-join queries. Schema provided.
+    description: >
+      Fix many errors in complex multi-join queries including column name
+      mismatches. Schema provided, no hint.
     steps: 4
+    count: 10
     ideal_action: correct_sql
 
 observation_space:
@@ -54,6 +60,8 @@ observation_space:
       nullable: true
     step_number:
       type: integer
+    steps_remaining:
+      type: integer
     previous_attempt:
       type: string
       nullable: true
@@ -68,13 +76,15 @@ action_space:
       type: string
 
 reward:
-  range: [0.001, 0.999]
+  range: [0.0, 1.0]
   description: >
-    0.999 = exact match, 0.7 = right tokens minor structure diff,
-    0.4 = most keywords correct, 0.2 = basic structure present, 0.001 = invalid SQL.
+    1.0 = exact match, 0.7 = right tokens minor structure diff,
+    0.4 = most keywords correct, 0.3 = partial match,
+    0.2 = basic structure present, 0.0 = invalid SQL.
+    Stagnation penalty of -0.1 applied after 2+ identical-reward steps.
 
 scoring:
-  reward_range: [0.001, 0.999]
+  reward_range: [0.0, 1.0]
   success_threshold: 0.5
   score_formula: mean(step_rewards)
 

@@ -26,12 +26,12 @@ except Exception:
     OpenAI = None
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY", "dummy")
-TASK_NAME = os.getenv("SQL_ENV_TASK", "easy")
-BENCHMARK = "sql-correction-env"
-ENV_URL = os.getenv("ENV_URL", "http://localhost:7860")
-MAX_STEPS = 8
+MODEL_NAME   = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+API_KEY      = os.getenv("HF_TOKEN") or os.getenv("API_KEY", "dummy")
+TASK_NAME    = os.getenv("SQL_ENV_TASK", "easy")
+BENCHMARK    = "sql-correction-env"
+ENV_URL      = os.getenv("ENV_URL", "http://localhost:7860")
+MAX_STEPS    = 8
 SUCCESS_SCORE_THRESHOLD = 0.5
 
 
@@ -52,7 +52,6 @@ def log_step(
 ) -> None:
     err = error if error else "null"
     done_val = str(done).lower()
-    # Collapse newlines so the entire step fits on one line (spec requirement)
     action_clean = action.replace("\n", " ").replace("\r", "").strip()
     print(
         f"[STEP] step={step} action={action_clean} "
@@ -80,26 +79,28 @@ SYSTEM_PROMPT = textwrap.dedent(
     You will be shown a broken SQL query that contains typos or keyword errors.
     Fix ALL errors and return ONLY the corrected SQL query.
     No explanation, no markdown, no code blocks, no backticks.
-    Common errors: FORM->FROM, WEHRE->WHERE, GRUP->GROUP, HAVNG->HAVING,
-    ORDR->ORDER, INNE->INNER, LFT->LEFT, BETWEN->BETWEEN, DSC->DESC, SELCT->SELECT.
+    Common keyword typos to watch for:
+      FORM->FROM, WEHRE->WHERE, WHER->WHERE,
+      GRUP->GROUP, HAVNG->HAVING, ORDR->ORDER,
+      INNE->INNER, LFT->LEFT, BETWEN->BETWEEN,
+      DSC->DESC, SELCT->SELECT, LIMT->LIMIT.
+    Also watch for column name errors described in the schema context.
     """
 ).strip()
 
-
 SQL_REPLACEMENTS = {
-    "FORM": "FROM",
-    "WEHRE": "WHERE",
-    "WHER": "WHERE",
-    "GRUP": "GROUP",
-    "HAVNG": "HAVING",
-    "ORDR": "ORDER",
-    "INNE": "INNER",
-    "LFT": "LEFT",
+    "FORM":   "FROM",
+    "WEHRE":  "WHERE",
+    "WHER":   "WHERE",
+    "GRUP":   "GROUP",
+    "HAVNG":  "HAVING",
+    "ORDR":   "ORDER",
+    "INNE":   "INNER",
+    "LFT":    "LEFT",
     "BETWEN": "BETWEEN",
-    "DSC": "DESC",
-    "SELCT": "SELECT",
-    "LIMT": "LIMIT",
-    "DPT_ID": "DEPT_ID",
+    "DSC":    "DESC",
+    "SELCT":  "SELECT",
+    "LIMT":   "LIMIT",
 }
 
 
@@ -114,7 +115,9 @@ def heuristic_correct_sql(query: str) -> str:
 
 
 def get_model_action(
-    client: Optional["OpenAI"], obs: dict, history: List[str]
+    client: Optional["OpenAI"],
+    obs: dict,
+    history: List[str],
 ) -> str:
     """Return a corrected SQL string. Falls back to heuristic on any failure."""
     heuristic = heuristic_correct_sql(obs.get("broken_query", ""))
@@ -128,10 +131,11 @@ def get_model_action(
         Broken SQL query:
         {obs.get("broken_query", "")}
 
-        Schema context: {obs.get("schema_context") or "Not provided"}
-        Error hint: {obs.get("error_hint") or "None"}
-        Your previous attempt: {obs.get("previous_attempt") or "None"}
-        Feedback: {obs.get("feedback") or "None"}
+        Schema context:    {obs.get("schema_context") or "Not provided"}
+        Error hint:        {obs.get("error_hint") or "None"}
+        Steps remaining:   {obs.get("steps_remaining", "?")}
+        Previous attempt:  {obs.get("previous_attempt") or "None"}
+        Feedback:          {obs.get("feedback") or "None"}
 
         Recent history:
         {history_block}
@@ -145,7 +149,7 @@ def get_model_action(
             model=MODEL_NAME,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
+                {"role": "user",   "content": user_prompt},
             ],
             temperature=0.2,
             max_tokens=300,
@@ -167,17 +171,14 @@ async def run_task(task_name: str) -> None:
     Run one full episode for `task_name`.
 
     The [END] log line is ALWAYS emitted via the finally block, even if an
-    exception occurs mid-episode or the reset call fails. This is required
-    by the hackathon spec to avoid disqualification.
+    exception occurs mid-episode or the reset call fails.
     """
-    # Initialise all accumulators BEFORE the try so finally can always read them
     rewards: List[float] = []
-    history: List[str] = []
+    history: List[str]   = []
     steps_taken = 0
-    score = 0.0
-    success = False
+    score       = 0.0
+    success     = False
 
-    # Build LLM client (best-effort; None means heuristic-only mode)
     client = None
     if OpenAI is not None and API_KEY not in {"", "dummy"}:
         try:
@@ -191,47 +192,52 @@ async def run_task(task_name: str) -> None:
     try:
         http = httpx.AsyncClient(base_url=ENV_URL, timeout=60.0)
 
-        # --- reset ---------------------------------------------------------
+        # ── reset ──────────────────────────────────────────────────────────
         reset_failed = False
         obs: dict = {}
         try:
-            reset_resp = await http.post("/reset", json={"difficulty": task_name})
+            reset_resp = await http.post(
+                "/reset", json={"difficulty": task_name}
+            )
             reset_resp.raise_for_status()
             reset_data = reset_resp.json()
+            # The openenv wrapper may nest the observation under "observation"
             obs = reset_data.get("observation", reset_data)
         except Exception as exc:
             print(f"[DEBUG] Reset failed: {exc}", flush=True)
-            # Do NOT return here — fall through to finally so [END] is always logged
             reset_failed = True
 
         if not reset_failed:
-            # --- step loop -------------------------------------------------
+            # ── step loop ──────────────────────────────────────────────────
             for step in range(1, MAX_STEPS + 1):
-                # Get action (never raises — heuristic is the ultimate fallback)
                 try:
                     action_str = get_model_action(client, obs, history)
                 except Exception as exc:
                     print(f"[DEBUG] Model action failed: {exc}", flush=True)
-                    action_str = heuristic_correct_sql(obs.get("broken_query", ""))
+                    action_str = heuristic_correct_sql(
+                        obs.get("broken_query", "")
+                    )
 
-                # Submit action to environment
                 try:
-                    step_resp = await http.post("/step", json={"action":{"corrected_query": action_str}})
+                    # Action must be wrapped under {"action": {...}}
+                    step_resp = await http.post(
+                        "/step",
+                        json={"action": {"corrected_query": action_str}},
+                    )
                     step_resp.raise_for_status()
                     result = step_resp.json()
                 except Exception as exc:
                     print(f"[DEBUG] Step {step} request failed: {exc}", flush=True)
-                    # Treat as a 0-reward terminal step so episode ends cleanly
                     rewards.append(0.0)
                     steps_taken = step
                     log_step(step, action_str, 0.0, True, str(exc))
                     break
 
-                obs = result.get("observation", obs)
+                obs    = result.get("observation", obs)
                 reward = float(result.get("reward", 0.0))
-                done = bool(result.get("done", False))
-                info = result.get("info")
-                error = info.get("error") if isinstance(info, dict) else None
+                done   = bool(result.get("done", False))
+                info   = result.get("info")
+                error  = info.get("error") if isinstance(info, dict) else None
 
                 rewards.append(reward)
                 steps_taken = step
@@ -244,23 +250,19 @@ async def run_task(task_name: str) -> None:
                 if done:
                     break
 
-            # Score = average reward across all steps, clamped to [0, 1]
             if rewards:
-                score = min(max(sum(rewards) / len(rewards), 0.0), 1.0)
+                score   = min(max(sum(rewards) / len(rewards), 0.0), 1.0)
             success = score >= SUCCESS_SCORE_THRESHOLD
 
     except Exception as exc:
-        # Catch-all for any unexpected error in the episode body
         print(f"[DEBUG] Unhandled episode error: {exc}", flush=True)
 
     finally:
-        # Always close the HTTP client
         if http is not None:
             try:
                 await http.aclose()
             except Exception as exc:
                 print(f"[DEBUG] HTTP close error: {exc}", flush=True)
-        # [END] MUST always be emitted — even after reset failure or exception
         log_end(success, steps_taken, score, rewards)
 
 
@@ -269,13 +271,8 @@ async def run_task(task_name: str) -> None:
 # ---------------------------------------------------------------------------
 
 async def main() -> None:
-    """
-    Run tasks according to SQL_ENV_TASK.
-    If SQL_ENV_TASK is a single valid difficulty, run only that task.
-    Otherwise run all three in sequence so all 3 tasks produce scores.
-    """
+    """Run all three difficulties in sequence so validator sees 3 [END] lines."""
     try:
-        # Always run all 3 tasks — validator counts 3 [END] lines
         for difficulty in ("easy", "medium", "hard"):
             await run_task(difficulty)
             print("", flush=True)
