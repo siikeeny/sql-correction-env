@@ -42,7 +42,7 @@ class SQLState(State):
 
 
 class SQLReward(BaseModel):
-    # Allow full [0.0, 1.0] range so perfect matches can return exactly 1.0
+    # Strictly between 0 and 1 as required by the OpenEnv spec
     value: float = Field(gt=0.0, lt=1.0)
     reason: str
 

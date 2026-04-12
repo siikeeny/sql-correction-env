@@ -55,7 +55,7 @@ class SQLCorrectionEnvironment(Environment):
         if abs(reward - self._last_reward) < 0.01 and self._step_count > 1:
             self._stagnation_count += 1
             if self._stagnation_count >= 2:
-                reward = max(0.0, reward - 0.1)
+                reward = max(0.01, reward - 0.1)
         else:
             self._stagnation_count = 0
 
