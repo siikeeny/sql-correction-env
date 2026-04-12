@@ -251,7 +251,7 @@ async def run_task(task_name: str) -> None:
                     break
 
             if rewards:
-                score   = min(max(sum(rewards) / len(rewards), 0.0), 1.0)
+                score   = min(max(sum(rewards) / len(rewards), 0.01), 0.99)
             success = score >= SUCCESS_SCORE_THRESHOLD
 
     except Exception as exc:

@@ -88,12 +88,16 @@ class SQLCorrectionEnv:
 
         done = reward >= 0.95 or self._step_count >= self._task.max_steps
         self._done = done
+        
+        safe_reward = float(f"{reward:.4f}")
+        safe_reward = max(0.02, min(0.98, safe_reward))
+
 
         obs = self._make_observation()
 
         return StepResult(
             observation=obs,
-            reward=round(reward, 4),
+            reward=safe_reward,
             done=done,
             info={
                 "grader_reason": reward_model.reason,

@@ -101,7 +101,7 @@ def grade(action: SQLAction, task: SQLTask) -> SQLReward:
         )
 
     # ── Level 0: No recognizable SQL ─────────────────────────────────────────
-    return SQLReward(value=_clamp(0.01), reason="Response is not valid SQL.")
+    return SQLReward(value=_clamp(0.02), reason="Response is not valid SQL.")
 
 
 def generate_feedback(action: SQLAction, task: SQLTask, reward: SQLReward) -> str:
