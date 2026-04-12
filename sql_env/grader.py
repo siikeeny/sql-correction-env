@@ -32,30 +32,39 @@ def _sql_keywords_present(query: str) -> set:
     return found
 
 
+def _clamp(value: float) -> float:
+    """Ensure reward is strictly within (0, 1) as required by the OpenEnv spec."""
+    return max(0.01, min(0.99, value))
+
+
 def grade(action: SQLAction, task: SQLTask) -> SQLReward:
     """
     5-level grader with partial progress signals.
+    All scores are clamped to [0.01, 0.99] — strictly between 0 and 1.
 
-    1.0  — exact normalized match (perfect fix)
-    0.7  — same token set, minor structural/whitespace differences
-    0.4  — most SQL keywords correct AND high token overlap
-    0.3  — partial keyword and structure match
-    0.2  — basic SELECT/FROM structure present
-    0.0  — not recognizable SQL
+    0.99 — exact normalized match (perfect fix)
+    0.70 — same token set, minor structural/whitespace differences
+    0.40 — most SQL keywords correct AND high token overlap
+    0.30 — partial keyword and structure match
+    0.20 — basic SELECT/FROM structure present
+    0.01 — not recognizable SQL
     """
     agent = _normalize(action.corrected_query)
     correct = _normalize(task.canonical_answer)
 
     # ── Level 1: Exact match ─────────────────────────────────────────────────
     if agent == correct:
-        return SQLReward(value=1.0, reason="Exact match — perfect correction.")
+        return SQLReward(
+            value=_clamp(0.99),
+            reason="Exact match — perfect correction.",
+        )
 
     # ── Level 2: Same token set (right words, minor ordering/alias diff) ─────
     agent_tokens = _tokenize(action.corrected_query)
     correct_tokens = _tokenize(task.canonical_answer)
     if agent_tokens == correct_tokens:
         return SQLReward(
-            value=0.7,
+            value=_clamp(0.70),
             reason="All correct tokens present but structure differs slightly.",
         )
 
@@ -67,17 +76,17 @@ def grade(action: SQLAction, task: SQLTask) -> SQLReward:
 
     if kw_overlap >= 0.85 and token_overlap >= 0.75:
         return SQLReward(
-            value=0.4,
+            value=_clamp(0.40),
             reason=(
                 f"Most keywords correct "
                 f"({kw_overlap:.0%} keyword match, {token_overlap:.0%} token match)."
             ),
         )
 
-    # ── Level 3.5: Partial keyword and structure match ────────────────────────
+    # ── Level 3.5: Partial keyword and structure match ───────────────────────
     if kw_overlap >= 0.65 and token_overlap >= 0.50:
         return SQLReward(
-            value=0.3,
+            value=_clamp(0.30),
             reason=(
                 f"Partial keyword and structure match "
                 f"({kw_overlap:.0%} keyword match, {token_overlap:.0%} token match)."
@@ -87,28 +96,28 @@ def grade(action: SQLAction, task: SQLTask) -> SQLReward:
     # ── Level 4: Basic structure present ─────────────────────────────────────
     if 'SELECT' in agent and 'FROM' in agent:
         return SQLReward(
-            value=0.2,
+            value=_clamp(0.20),
             reason="Basic SELECT/FROM structure present but significant errors remain.",
         )
 
     # ── Level 0: No recognizable SQL ─────────────────────────────────────────
-    return SQLReward(value=0.0, reason="Response is not valid SQL.")
+    return SQLReward(value=_clamp(0.01), reason="Response is not valid SQL.")
 
 
 def generate_feedback(action: SQLAction, task: SQLTask, reward: SQLReward) -> str:
     """Human-readable feedback shown in the next observation."""
-    if reward.value >= 1.0:
+    if reward.value >= 0.99:
         return "Correct! Query matches perfectly."
-    if reward.value >= 0.7:
+    if reward.value >= 0.70:
         return "Very close — check spacing or minor clause differences."
-    if reward.value >= 0.4:
+    if reward.value >= 0.40:
         return (
             "Good progress — most keywords are right, "
             "but check for typos in keywords or column names."
         )
-    if reward.value >= 0.3:
+    if reward.value >= 0.30:
         return "Partial match — right direction but several keywords or columns are off."
-    if reward.value >= 0.2:
+    if reward.value >= 0.20:
         return (
             "Basic structure is there — look carefully at every SQL keyword for typos."
         )
